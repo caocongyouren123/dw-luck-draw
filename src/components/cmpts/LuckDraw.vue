@@ -11,7 +11,7 @@
     <!-- 奖品详情区域 end -->
 
     <!-- 抽奖区域 start -->
-    <div class="start">开始</div>
+    <div class="start" @click="drawStart">开始</div>
     <!-- 抽奖区域 end -->
 
     <!-- 抽奖类型区域 start -->
@@ -24,18 +24,50 @@
     <div class="right">
       <el-button>参与人员</el-button>
       <el-button>抽奖记录</el-button>
-      <el-button>重新抽奖</el-button>  <!-- 之前抽奖全部作废，抽奖记录也会被清空 -->
+      <el-button @click="drawAgain">重新抽奖</el-button>  <!-- 之前抽奖全部作废，抽奖记录也会被清空 -->
     </div>
     <!-- 抽奖记录区域 end -->
+
+    <!-- 弹窗显示中奖人员 start -->
+    <ShowDrawName v-model:dialogVisible="dialogVisible" />
+    <!-- 弹窗显示中奖人员 end -->
   </div>
 </template>
 
 <script setup lang='ts'>
 import { ref } from 'vue'
+import { ElMessageBox,ElMessage } from 'element-plus'
+import ShowDrawName from './ShowDrawName.vue'
 import { prizeInfo } from '../peizeInfo'
 
+// 定义变量部分
 const prizeType = ['特等奖','一等奖','二等奖','三等奖']
-const prizeValue = ref('特等奖')
+const prizeValue = ref<string>('特等奖')
+const dialogVisible = ref(false)   // 显示中奖人员的弹窗可见性
+
+// 逻辑处理部分
+// 1. 重新抽奖
+const drawAgain = () => {
+  ElMessageBox.confirm(
+    '确定要重置所有的抽奖操作吗？',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    ElMessage.success('重置成功！')
+  }).catch(() => {
+    ElMessage.info('取消重置！')
+  })
+}
+
+// 2. 开始抽奖
+const drawStart = () => {
+  // 如果没有导入抽奖人员数据则提示 “请先导入抽奖人员数据！”
+  dialogVisible.value = true
+}
+
 </script>
 
 <style lang='scss' scoped>
@@ -109,7 +141,7 @@ const prizeValue = ref('特等奖')
 .right{
   position: absolute;
   top: 50px;
-  right: 20px;
+  right: 30px;
 }
 :deep(.el-button){
   background: #f2ca04;
