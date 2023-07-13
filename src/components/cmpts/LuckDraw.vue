@@ -131,28 +131,33 @@ const drawAgain = () => {
 const drawStart = () => {
   // isStop.value ? startDraw() : stopDraw()
   const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
-  if(luckNameList && luckNameList.length){
-    // 校验当前奖项是否已经被抽完
-    const flag = checkoutDraw(luckNameList)
-    // 根据 startStatus 的状态决定当前奖项能否再抽
-    if(flag){
+  if(haveRemeber.value){
+    if(luckNameList && luckNameList.length){
+      // 校验当前奖项是否已经被抽完
+      const flag = checkoutDraw(luckNameList)
+      // 根据 startStatus 的状态决定当前奖项能否再抽
+      if(flag){
+        if(isStop.value){
+          startDraw()
+        }else{
+          stopDraw()
+        }
+      }else{  
+        // 不可以抽奖，说明该奖项名额已经抽完了
+        ElMessage.warning(`${prizeValue.value}` + '已经抽完了！')
+      }  
+    }else{
+      //此时没有中奖人员，任何奖项下都可以抽奖
       if(isStop.value){
         startDraw()
       }else{
         stopDraw()
       }
-    }else{  
-      // 不可以抽奖，说明该奖项名额已经抽完了
-      ElMessage.warning(`${prizeValue.value}` + '已经抽完了！')
-    }  
-  }else{
-    //此时没有中奖人员，任何奖项下都可以抽奖
-    if(isStop.value){
-      startDraw()
-    }else{
-      stopDraw()
     }
+  }else{
+    dialogVisible.value = true
   }
+  
 }
 
 // 3. 点击参与人员
@@ -267,8 +272,10 @@ const changePrizeType = (type: string) => {
   prizeValue.value = type
   // 将按钮文字重置为开始
   showName.value = '开始'
-  // 校验当前奖项是否已经被抽完
-  checkoutDraw(JSON.parse(localStorage.getItem('luckNameList')!))
+  if(haveRemeber.value){
+    // 校验当前奖项是否已经被抽完
+    checkoutDraw(JSON.parse(localStorage.getItem('luckNameList')!))
+  }
 }
 
 // 10. 接收姓名数据
