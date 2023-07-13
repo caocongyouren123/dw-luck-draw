@@ -71,6 +71,7 @@ const initLoad = () => {
     useNameList.value = nameList
     haveRemeber.value = true
   }else{
+    useNameList.value = []
     haveRemeber.value = false
   }
 }
@@ -124,13 +125,24 @@ const drawHistory = () => {
 
 // 5. 循环数组
 const forNameList = (list: any) => {
-  list = shuffle(list)
+  list = shuffle(list);
   for(let i=0; i<list.length; i++){
     setTimeout(() => {
       if(!isStop.value){
         showName.value = list[i].name;
         if(i == list.length - 1){
           // 当数组循环结束后，没有停止就在继续循环
+          // 获取所有的姓名列表
+          const allNameList = JSON.parse(localStorage.getItem('nameList')!)
+
+          // 获取中奖人员姓名列表
+          const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
+
+          // 将中奖人员从下一次抽奖中过滤掉，确保每个人只能有一次中奖机会，也就是从 allNameList 中过滤掉 tableDrawData中的元素
+          const newNameList = allNameList.filter((itemA: any) => luckNameList.every((itemB: any) => itemB.name !== itemA.name))
+
+          // 将新的姓名列表重新赋值给 useNameList
+          useNameList.value = newNameList
           forNameList(useNameList.value)
         }
       }
@@ -162,6 +174,7 @@ const startDraw = () => {
   }else{
     // 如果有数据开始循环滚动姓名，再次点击则停止滚动并弹出中奖人员
     isStop.value = false  // 开始循环  
+    console.log(useNameList.value,'useNameList==');
     forNameList(useNameList.value)  // 循环姓名数组
   }
 }
@@ -206,6 +219,7 @@ const nameList = (arr: any) => {
     useNameList.value = arr
     haveRemeber.value = true
   }else{
+    useNameList.value = []
     haveRemeber.value = false
   }
 }
