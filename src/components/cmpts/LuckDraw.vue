@@ -11,7 +11,7 @@
     <!-- 奖品详情区域 end -->
 
     <!-- 抽奖区域 start -->
-    <div class="start" @click="drawStart">
+    <div :class="[startStatus ? 'start' : 'stop']" @click="drawStart">
       <span v-if="!haveRemeber">开始</span>
       <span v-else class="showName">{{ showName }}</span>
     </div>
@@ -36,19 +36,27 @@
     <!-- 弹窗显示中奖人员 end -->
 
     <!-- 参与人员和抽奖记录的抽屉 start -->
-    <ParticiPantVue v-model:drawVisible="drawVisible" :drawTitle="drawTitle" @nameList="nameList"/>
+    <ParticiPantVue v-model:drawVisible="drawVisible" :drawTitle="drawTitle" @nameList="nameList" @clearData="clearData"/>
     <!-- 参与人员和抽奖记录的抽屉 end -->
   </div>
 </template>
 
 <script setup lang='ts'>
-import { ref, watch, onMounted } from 'vue'
+import { ref } from 'vue'
 // import { storeToRefs } from 'pinia'
 import { ElMessageBox,ElMessage } from 'element-plus'
 import ShowDrawName from './ShowDrawName.vue'
 import ParticiPantVue from './ParticiPant.vue'
 import { prizeInfo } from '../peizeInfo'
 // import { useAppStore } from "@/stores"
+
+// 定义类型中奖人员名单数据类型
+interface luckNameListType {
+  name: string
+  sex: string
+  dept: string
+  prize: string
+}
 
 // 定义变量部分
 // const appStore = useAppStore()
@@ -62,6 +70,7 @@ const haveRemeber = ref<boolean>(false)  // 记录是否有参加抽奖人员的
 const useNameList = ref<any>([])
 const isStop = ref(true)   // 控制抽奖时姓名滚动的状态，true表示停止滚动，false表示一直滚动
 const showName = ref('开始')  // 当前显示的中奖人员名单
+const startStatus = ref(true)  //是否可以抽奖的状态，默认可以抽奖
 
 // 逻辑处理部分
 const initLoad = () => {
@@ -70,13 +79,15 @@ const initLoad = () => {
   if(nameList && nameList.length){
     // 获取所有的姓名列表
     const allNameList = JSON.parse(localStorage.getItem('nameList')!)
-    // 获取中奖人员姓名列表
+    // 获取中奖人员名单
     const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
     if(luckNameList){
       // 将中奖人员从下一次抽奖中过滤掉，确保同一奖项每个人只能有一次中奖机会
       const newNameList = allNameList.filter((itemA: any) => luckNameList.every((itemB: any) => itemB.name !== itemA.name))
       // 将新的姓名列表重新赋值给 useNameList
       useNameList.value = newNameList
+      // 校验当前奖项是否已经被抽完
+      setTimeout(()=>{checkoutDraw(luckNameList)})
     }else{
       useNameList.value = allNameList
     }
@@ -119,10 +130,28 @@ const drawAgain = () => {
 // 2. 点击开始抽奖
 const drawStart = () => {
   // isStop.value ? startDraw() : stopDraw()
-  if(isStop.value){
-    startDraw()
+  const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
+  if(luckNameList && luckNameList.length){
+    // 校验当前奖项是否已经被抽完
+    const flag = checkoutDraw(luckNameList)
+    // 根据 startStatus 的状态决定当前奖项能否再抽
+    if(flag){
+      if(isStop.value){
+        startDraw()
+      }else{
+        stopDraw()
+      }
+    }else{  
+      // 不可以抽奖，说明该奖项名额已经抽完了
+      ElMessage.warning(`${prizeValue.value}` + '已经抽完了！')
+    }  
   }else{
-    stopDraw()
+    //此时没有中奖人员，任何奖项下都可以抽奖
+    if(isStop.value){
+      startDraw()
+    }else{
+      stopDraw()
+    }
   }
 }
 
@@ -228,11 +257,18 @@ const stopDraw = () => {
 
   // 将新的姓名列表重新赋值给 useNameList
   useNameList.value = newNameList
+
+  // 校验当前奖项是否已经被抽完
+  checkoutDraw(tableDrawData)
 }
 
 // 9. 改变抽奖类型
 const changePrizeType = (type: string) => {
   prizeValue.value = type
+  // 将按钮文字重置为开始
+  showName.value = '开始'
+  // 校验当前奖项是否已经被抽完
+  checkoutDraw(JSON.parse(localStorage.getItem('luckNameList')!))
 }
 
 // 10. 接收姓名数据
@@ -244,6 +280,51 @@ const nameList = (arr: any) => {
     useNameList.value = []
     haveRemeber.value = false
   }
+}
+
+// 11. 检验当前奖项是否已经抽完，初始化，切换奖项类型，点击抽奖,抽奖结束的时候都需要校验
+const checkoutDraw = (list: luckNameListType[]) => {
+  // 此时表示有中奖人员，需要根据条件来确认是否可以在继续抽奖
+  // 整理每一个奖项出现的次数
+  let prizeList = list.map((item: luckNameListType) => item.prize)
+  const prizObj =  prizeList.reduce((preValue: any, curValue: string)=>{
+    preValue[curValue] = (preValue[curValue] + 1) || 1
+    return preValue
+  },{})
+  console.log(prizObj,'prizObj==');
+
+  // 如果此时在抽特等奖，只能有 1 个名额
+  if(prizeValue.value === '特等奖'){
+    if(prizObj['特等奖'] === 1) {  // 此时特等奖不能在抽了
+      startStatus.value = false 
+    }else{
+      startStatus.value = true 
+    }
+  }else if(prizeValue.value === '一等奖'){  // 如果此时在抽一等奖，只能有 2 个名额
+    if(prizObj['一等奖'] == 2 ){  // 此时一等奖不能在抽了
+      startStatus.value = false 
+      } else{
+      startStatus.value = true 
+    }
+  }else if(prizeValue.value === '二等奖'){  // 如果此时在抽二等奖，只能有 5 个名额
+    if(prizObj['二等奖'] == 5){  // 此时二等奖不能在抽了
+      startStatus.value = false 
+      } else{
+      startStatus.value = true 
+    }
+  }else if(prizeValue.value === '三等奖'){  // 如果此时在抽三等奖，只能有 10 个名额
+    if(prizObj['三等奖'] == 10){  // 此时三等奖不能在抽了
+      startStatus.value = false 
+      } else{
+      startStatus.value = true 
+    }
+  }
+  return startStatus.value
+}
+
+// 12. 监听子组件是否清除了中奖人员名单，只要清空了，所有奖项都可以重新抽奖
+const clearData = () => {
+  startStatus.value = true
 }
 </script>
 
@@ -296,6 +377,22 @@ const nameList = (arr: any) => {
     box-shadow: 0px 0px 50px #000;
     background: #CC000000;
   }
+}
+.stop{
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  font-size: 60px;
+  color: #fff;
+  background: #d4bdbd;
+  border-radius: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: not-allowed;
 }
 .radioGroup{
   top: 40%;

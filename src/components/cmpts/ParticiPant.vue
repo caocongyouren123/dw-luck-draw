@@ -24,7 +24,11 @@
         <template #default="scope">
 				  <el-tag v-if="item.prop == 'sex'" :type="scope.row.sex === '男' ? 'warning' : 'success'">{{ scope.row.sex }}</el-tag>
           <span v-else-if="item.prop == 'prize'" 
-            :style="{color: scope.row.prize == '特等奖' ? '#f00' : scope.row.prize == '一等奖' ? '#00FF00' : scope.row.prize == '二等奖' ? '#0000FF' : '#000'}"
+            :style="{color: scope.row.prize == '特等奖' ? '#f00' 
+            : scope.row.prize == '一等奖' ? '#00FF00' 
+            : scope.row.prize == '二等奖' ? '#0000FF' 
+            : '#000'
+          }"
           >{{ scope.row.prize }}</span>
 			</template >
       </el-table-column>
@@ -52,7 +56,7 @@ const props = defineProps({
 })
 
 // 发送值
-const emits = defineEmits(['update:drawVisible','nameList'])
+const emits = defineEmits(['update:drawVisible','nameList','clearData'])
 
 // 定义变量部分
 const appStore = useAppStore()
@@ -122,6 +126,7 @@ const clearData = () => {
       localStorage.setItem('nameList', JSON.stringify(empty))
     }else{
       localStorage.setItem('luckNameList', JSON.stringify(empty))
+      emits('clearData')
     }
     ElMessage.success('清空成功！')
   }).catch(() => {
