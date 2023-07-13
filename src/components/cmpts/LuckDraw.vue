@@ -59,7 +59,7 @@ const drawVisible = ref(false)  // 参与人员抽屉可见性
 const drawTitle = ref('参与人员')  // 抽屉标题
 const haveRemeber = ref<boolean>(false)  // 记录是否有参加抽奖人员的数据
 // const { tableNameList } = storeToRefs(appStore)  // 从pinia中获取当前导入数据中的姓名，注意不要丢失了响应式
-const useNameList = ref([])
+const useNameList = ref<any>([])
 const isStop = ref(true)   // 控制抽奖时姓名滚动的状态，true表示停止滚动，false表示一直滚动
 const showName = ref('开始')  // 当前显示的中奖人员名单
 
@@ -68,7 +68,18 @@ const initLoad = () => {
   // let tableData = JSON.parse(localStorage.getItem('tableData')!)
   let nameList = JSON.parse(localStorage.getItem('nameList')!)
   if(nameList && nameList.length){
-    useNameList.value = nameList
+    // 获取所有的姓名列表
+    const allNameList = JSON.parse(localStorage.getItem('nameList')!)
+    // 获取中奖人员姓名列表
+    const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
+    if(luckNameList){
+      // 将中奖人员从下一次抽奖中过滤掉，确保同一奖项每个人只能有一次中奖机会
+      const newNameList = allNameList.filter((itemA: any) => luckNameList.every((itemB: any) => itemB.name !== itemA.name))
+      // 将新的姓名列表重新赋值给 useNameList
+      useNameList.value = newNameList
+    }else{
+      useNameList.value = allNameList
+    }
     haveRemeber.value = true
   }else{
     useNameList.value = []
@@ -90,8 +101,12 @@ const drawAgain = () => {
         type: 'warning'
       }
     ).then(() => {
-      tableDrawData.pop()
+      const popValue = tableDrawData.pop()
       localStorage.setItem('luckNameList',JSON.stringify(tableDrawData))
+      // 重置后刚才中奖的人应该继续放入带抽奖列表中
+      useNameList.value.push({
+        name: popValue.name
+      })
       ElMessage.success('重置成功！')
     }).catch(() => {
       ElMessage.info('取消重置！')
@@ -134,15 +149,16 @@ const forNameList = (list: any) => {
           // 当数组循环结束后，没有停止就在继续循环
           // 获取所有的姓名列表
           const allNameList = JSON.parse(localStorage.getItem('nameList')!)
-
           // 获取中奖人员姓名列表
           const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
-
-          // 将中奖人员从下一次抽奖中过滤掉，确保每个人只能有一次中奖机会，也就是从 allNameList 中过滤掉 tableDrawData中的元素
-          const newNameList = allNameList.filter((itemA: any) => luckNameList.every((itemB: any) => itemB.name !== itemA.name))
-
-          // 将新的姓名列表重新赋值给 useNameList
-          useNameList.value = newNameList
+          if(luckNameList){
+            // 将中奖人员从下一次抽奖中过滤掉，确保同一奖项每个人只能有一次中奖机会
+            const newNameList = allNameList.filter((itemA: any) => luckNameList.every((itemB: any) => itemB.name !== itemA.name))
+            // 将新的姓名列表重新赋值给 useNameList
+            useNameList.value = newNameList
+          }else{
+            useNameList.value = allNameList
+          }
           forNameList(useNameList.value)
         }
       }
@@ -165,7 +181,6 @@ const shuffle = (arr: any) => {
   return arrNew;
 }
 
-
 // 7. 点击开始
 const startDraw = () => {
   // 如果没有导入抽奖人员数据则提示 “请先导入抽奖人员数据！”
@@ -174,6 +189,13 @@ const startDraw = () => {
   }else{
     // 如果有数据开始循环滚动姓名，再次点击则停止滚动并弹出中奖人员
     isStop.value = false  // 开始循环  
+    // 获取所有的姓名列表
+    const allNameList = JSON.parse(localStorage.getItem('nameList')!)
+    // 如果清除了中奖人员
+    const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
+    if(!luckNameList.length){
+      useNameList.value = allNameList
+    }
     console.log(useNameList.value,'useNameList==');
     forNameList(useNameList.value)  // 循环姓名数组
   }
