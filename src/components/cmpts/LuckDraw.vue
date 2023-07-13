@@ -36,52 +36,53 @@
     <!-- 弹窗显示中奖人员 end -->
 
     <!-- 参与人员和抽奖记录的抽屉 start -->
-    <ParticiPantVue v-model:drawVisible="drawVisible" :drawTitle="drawTitle" />
+    <ParticiPantVue v-model:drawVisible="drawVisible" :drawTitle="drawTitle" @nameList="nameList"/>
     <!-- 参与人员和抽奖记录的抽屉 end -->
   </div>
 </template>
 
 <script setup lang='ts'>
-import { ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
+import { ref, watch, onMounted } from 'vue'
+// import { storeToRefs } from 'pinia'
 import { ElMessageBox,ElMessage } from 'element-plus'
 import ShowDrawName from './ShowDrawName.vue'
 import ParticiPantVue from './ParticiPant.vue'
 import { prizeInfo } from '../peizeInfo'
-import { useAppStore } from "@/stores"
+// import { useAppStore } from "@/stores"
 
 // 定义变量部分
-const appStore = useAppStore()
+// const appStore = useAppStore()
 const prizeType = ['特等奖','一等奖','二等奖','三等奖']
 const prizeValue = ref<string>('特等奖')
 const dialogVisible = ref(false)   // 显示中奖人员的弹窗可见性
 const drawVisible = ref(false)  // 参与人员抽屉可见性
 const drawTitle = ref('参与人员')  // 抽屉标题
 const haveRemeber = ref<boolean>(false)  // 记录是否有参加抽奖人员的数据
-const { tableNameList } = storeToRefs(appStore)  // 从pinia中获取当前导入数据中的姓名，注意不要丢失了响应式
+// const { tableNameList } = storeToRefs(appStore)  // 从pinia中获取当前导入数据中的姓名，注意不要丢失了响应式
 const useNameList = ref([])
 const isStop = ref(true)   // 控制抽奖时姓名滚动的状态，true表示停止滚动，false表示一直滚动
 const showName = ref('开始')  // 当前显示的中奖人员名单
 
 // 逻辑处理部分
-// 看LocalStorage中有没有姓名数据
-// 如果有抽奖人员数据 haveRemeber 记为 true,否则记为 false,这里必须要加上immediate，否则刷新后不生效
-watch(tableNameList, () => {
-  if(JSON.parse(localStorage.getItem('nameList')!) && JSON.parse(localStorage.getItem('nameList')!).length){
-    useNameList.value = JSON.parse(localStorage.getItem('nameList')!)
+const initLoad = () => {
+  // let tableData = JSON.parse(localStorage.getItem('tableData')!)
+  let nameList = JSON.parse(localStorage.getItem('nameList')!)
+  if(nameList && nameList.length){
+    useNameList.value = nameList
     haveRemeber.value = true
   }else{
     haveRemeber.value = false
   }
-},{immediate: true})
+}
+initLoad()
 
 // 1. 重新抽奖
 const drawAgain = () => {
   // 重新抽奖指的是清除最近一次抽奖记录，可以一直重置，直到抽奖记录为空。
-  let tableDrawData: any = JSON.parse(localStorage.getItem('luckNameList')!)
+  let tableDrawData = JSON.parse(localStorage.getItem('luckNameList')!)
   if(tableDrawData && tableDrawData.length){
     ElMessageBox.confirm(
-      '确定要重置所有的抽奖操作吗？',
+      '确定要重置上一次的抽奖操作吗？',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -128,7 +129,10 @@ const forNameList = (list: any) => {
     setTimeout(() => {
       if(!isStop.value){
         showName.value = list[i].name;
-        (i == list.length - 1) && (forNameList(useNameList.value));  // 当数组循环结束后，没有停止就在继续循环
+        if(i == list.length - 1){
+          // 当数组循环结束后，没有停止就在继续循环
+          forNameList(useNameList.value)
+        }
       }
     },50 * i);
   }
@@ -157,7 +161,7 @@ const startDraw = () => {
     dialogVisible.value = true
   }else{
     // 如果有数据开始循环滚动姓名，再次点击则停止滚动并弹出中奖人员
-    isStop.value = false  // 开始循环
+    isStop.value = false  // 开始循环  
     forNameList(useNameList.value)  // 循环姓名数组
   }
 }
@@ -181,8 +185,14 @@ const stopDraw = () => {
   })
   localStorage.setItem('luckNameList',JSON.stringify(tableDrawData))
 
-  // 将中奖人员从下一次抽奖中过滤掉，确保每个人只能有一次中奖机会
-  useNameList.value = useNameList.value.filter((item: any) => item.name != showName.value)
+  // 获取所有的姓名列表
+  const allNameList = JSON.parse(localStorage.getItem('nameList')!)
+
+  // 将中奖人员从下一次抽奖中过滤掉，确保每个人只能有一次中奖机会，也就是从 allNameList 中过滤掉 tableDrawData中的元素
+  const newNameList = allNameList.filter((itemA: any) => tableDrawData.every((itemB: any) => itemB.name !== itemA.name))
+
+  // 将新的姓名列表重新赋值给 useNameList
+  useNameList.value = newNameList
 }
 
 // 9. 改变抽奖类型
@@ -190,6 +200,15 @@ const changePrizeType = (type: string) => {
   prizeValue.value = type
 }
 
+// 10. 接收姓名数据
+const nameList = (arr: any) => {
+  if(arr && arr.length){
+    useNameList.value = arr
+    haveRemeber.value = true
+  }else{
+    haveRemeber.value = false
+  }
+}
 </script>
 
 <style lang='scss' scoped>

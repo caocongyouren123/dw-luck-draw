@@ -52,7 +52,7 @@ const props = defineProps({
 })
 
 // 发送值
-const emits = defineEmits(['update:drawVisible'])
+const emits = defineEmits(['update:drawVisible','nameList'])
 
 // 定义变量部分
 const appStore = useAppStore()
@@ -164,7 +164,7 @@ const importData = (e: any) => {
 
     // 将姓名数据存在localStorage中
     localStorage.setItem('nameList', JSON.stringify(tableNameData.value))
-
+    emits('nameList', tableNameData.value)
     // 给当前表格数据赋值
     tableData.value = tableDataTemp.value
     
