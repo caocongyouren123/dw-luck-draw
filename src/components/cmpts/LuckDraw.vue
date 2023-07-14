@@ -131,7 +131,7 @@ const drawAgain = () => {
 const drawStart = () => {
   // isStop.value ? startDraw() : stopDraw()
   const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
-  if(haveRemeber.value){
+  if(haveRemeber.value){  // 如果没有参与人员不进行后续操作直接弹出导入人员提示
     if(luckNameList && luckNameList.length){
       // 校验当前奖项是否已经被抽完
       const flag = checkoutDraw(luckNameList)
