@@ -225,14 +225,14 @@ const startDraw = () => {
     isStop.value = false  // 开始循环  
     // 获取所有的姓名列表
     const allNameList = JSON.parse(localStorage.getItem('nameList')!)
-    // 如果清除了中奖人员
+    // 获取中奖人员
     const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
-    if(!luckNameList.length){
+    // 如果清除了中奖人员
+    if(!luckNameList || luckNameList && !luckNameList.length){
       useNameList.value = allNameList
     }
-    console.log(useNameList.value,'useNameList==');
     forNameList(useNameList.value)  // 循环姓名数组
-  }
+  }     
 }
 
 // 8. 点击结束
@@ -273,8 +273,11 @@ const changePrizeType = (type: string) => {
   // 将按钮文字重置为开始
   showName.value = '开始'
   if(haveRemeber.value){
-    // 校验当前奖项是否已经被抽完
-    checkoutDraw(JSON.parse(localStorage.getItem('luckNameList')!))
+    // 校验当前奖项是否已经被抽完,第一次抽奖时候不校验
+    const luckNameList = JSON.parse(localStorage.getItem('luckNameList')!)
+    if(luckNameList && luckNameList.length){
+      checkoutDraw(luckNameList)
+    }
   }
 }
 
